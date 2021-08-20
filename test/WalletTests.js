@@ -4,7 +4,7 @@ const CakeLP = artifacts.require("CakeLP")
 const StakingPool = artifacts.require("StakingPool")
 
 
-contract.skip("Wallet", accounts => {
+contract("Wallet", accounts => {
 
     beforeEach(async () => {
         let pool = await StakingPool.deployed()

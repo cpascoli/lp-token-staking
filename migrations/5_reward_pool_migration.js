@@ -1,7 +1,7 @@
 const ETB = artifacts.require("ETB");
 const CakeLP = artifacts.require("CakeLP");
-const StakingPool = artifacts.require("StakingPool");
+const StakingRewardPool = artifacts.require("StakingRewardPool");
 
 module.exports = (deployer, network, accounts) => {
-  deployer.deploy(StakingPool, ETB.address, CakeLP.address)
+  deployer.deploy(StakingRewardPool, ETB.address, CakeLP.address)
 }

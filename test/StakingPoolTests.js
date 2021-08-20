@@ -74,7 +74,7 @@ contract("StakingPool", accounts => {
         assert.equal(stakes2.length, 2 , "Account should have 2 stakes")
         assert.equal(stakes2[1].amount, secondStakeAmount , "Invalid amount in 2nd stake")
 
-        assert.equal(parseInt(stakes2[1].time), parseInt(stakes2[0].time) + deltaTime, "Invalid time differences between 2 stakes")
+        assert.equal(parseInt(stakes2[1].from), parseInt(stakes2[0].from) + deltaTime, "Invalid time differences between 2 stakes")
     })
 
     it("unstaking CaleLP tokens should increase the account balance", async () => {

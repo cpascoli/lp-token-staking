@@ -11,6 +11,6 @@ import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract ETB is ERC20 {
 
     constructor() ERC20("Eat The Blocks Token", "ETB") {
-        _mint(msg.sender, 10000);
+        _mint(msg.sender, 10000 * 1000);
     }
 }
