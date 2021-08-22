@@ -51,7 +51,7 @@ contract("StakingRewardPool", accounts => {
 
         // start a new reward phase
         let deltaTime = 7 * 24 * 60 * 60 // 7 days
-        let reward = 5 * deltaTime // 5 tokens per per second
+        let reward = 5 * deltaTime // 5 tokens per per second for 7 days
         let start = Math.round(new Date().getTime() / 1000)
         
         let end = start + deltaTime
@@ -68,8 +68,8 @@ contract("StakingRewardPool", accounts => {
         // stake LP tokens 
         await pool.startStake(stakeAmount)
 
-        // wait some time
-        await helper.advanceTimeAndBlock(1);
+        // wait 7 days
+        await helper.advanceTimeAndBlock(deltaTime);
     
         let contractRewards = (await etb.balanceOf(pool.address)).toNumber()
 
