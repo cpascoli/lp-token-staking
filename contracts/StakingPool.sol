@@ -64,7 +64,6 @@ contract StakingPool is Wallet  {
         Stake[] storage userStakes = stakes[msg.sender];
         Stake storage lastStake = userStakes[userStakes.length-1];
         lastStake.to = block.timestamp;
-
     }
 
 

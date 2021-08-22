@@ -19,6 +19,8 @@ contract StakingRewardPool is StakingPool  {
     IERC20 internal rewardToken;
     RewardPhase[] public rewardPhases;
 
+    uint constant precision = 10000000;
+
     event RewardInfo(uint stakerQuota, uint phaseInterval, uint rewardRate, uint reward);
 
     constructor(address _rewardTokenAddress, address _lpTokenAddress) StakingPool(_rewardTokenAddress, _lpTokenAddress) {
@@ -60,10 +62,14 @@ contract StakingRewardPool is StakingPool  {
  
         super.endStake();
 
-        emit RewardInfo(stakerQuota, phaseInterval, rewardRate, reward);
-
         // transfer reward to the useer
-        rewardToken.transfer(msg.sender, reward);
+        if (reward > 0) {
+            uint balance = rewardBalance();
+            require(balance >= reward, appendUintToString("current reward: ", reward));
+
+            rewardToken.transfer(msg.sender, reward);
+            emit RewardInfo(stakerQuota, phaseInterval, rewardRate, reward);
+        }
     }
 
 
@@ -79,17 +85,14 @@ contract StakingRewardPool is StakingPool  {
 
         require(from < to, "Invalid staking interval");
 
-        uint precision = 10000;
-
         (uint stakerWeight, uint totalWeight) = stakingWeights(from, to, msg.sender);
        
         uint stakerQuota = stakerWeight.mul(precision).div(totalWeight);
         uint phaseInterval = to.sub(from);
         uint rewardRate = rewardRateForPhase(currentPhase);
-
         uint reward = stakerQuota.mul(phaseInterval).mul(rewardRate).div(precision);
 
-        return (stakerQuota, phaseInterval, rewardRate, reward);
+        return (stakerWeight, phaseInterval, rewardRate, reward);
     }
 
     function getCurrentRewardPhase() internal view returns (RewardPhase memory)  {
@@ -105,9 +108,7 @@ contract StakingRewardPool is StakingPool  {
 
         for (uint i=0; i<stakers.length; i++) {
             address addr = stakers[i];
-            Stake[] memory stakesInfo = stakes[addr];
-
-            uint weight = stakesWeight(stakesInfo, from, to);
+            uint weight = stakesWeight(addr, from, to);
             if (weight == 0) continue;
 
             totalWeight = totalWeight.add(weight);
@@ -120,7 +121,9 @@ contract StakingRewardPool is StakingPool  {
     }
 
 
-    function stakesWeight(Stake[] memory stakesInfo, uint from, uint to) internal view returns (uint) {
+    function stakesWeight(address addr, uint from, uint to) public view returns (uint) {
+
+        Stake[] memory stakesInfo = stakes[addr];
 
         uint total = 0;
         for (uint j=0; j< stakesInfo.length; j++) {
@@ -128,16 +131,18 @@ contract StakingRewardPool is StakingPool  {
 
             // the interval we should consider for the staking period
             uint start = Math.max(from, stake.from);
-            uint end = stake.to == 0 ? block.timestamp : Math.min(to, stake.to);
+            uint end = stake.to == 0 ? block.timestamp :  stake.to; //Math.min(to, stake.to);
 
             // ensure start < end to process staking interval
+            require(start < end, "Invalid stakesInfo timestamp");
+            
             if (start >= end) continue;
 
             uint stakingInterval = end.sub(start);
             uint stakingWeight = stakingInterval.mul(stake.amount);
             total = total.add(stakingWeight);
         }
-
+        
         return total;
     }
 
@@ -150,18 +155,12 @@ contract StakingRewardPool is StakingPool  {
     }
 
 
-    // function transferReward(address sender, address recipient, uint amount) internal override {
-    //     rewardToken.transferFrom(sender, recipient, amount);
-    // }
-
-
     function reset() public override onlyOwner {
         for (uint i=0; i<rewardPhases.length; i++) {
             delete rewardPhases[i];
         }
 
         // return leftover rewards
-
         uint leftover = rewardBalance();
         rewardToken.transfer(msg.sender, leftover);
 

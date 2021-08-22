@@ -10,8 +10,43 @@ contract("StakingRewardPool", accounts => {
 
     beforeEach(async () => {
         let pool = await StakingRewardPool.deployed()
+        let cakeLP = await CakeLP.deployed()
+        let etb = await ETB.deployed()
+
         await pool.reset()
+        
+        // reset reward tokens
+        await resetTokenBalanceToAmount(etb, accounts[1], 0, accounts[0])
+        await resetTokenBalanceToAmount(etb, accounts[2], 0, accounts[0])
+        await resetTokenBalanceToAmount(etb, accounts[3], 0, accounts[0])
+        await resetTokenBalanceToAmount(etb, accounts[4], 0, accounts[0])
+
+        // allocate some LP tokens
+        await resetTokenBalanceToAmount(cakeLP, accounts[1], 10, accounts[0])
+        await resetTokenBalanceToAmount(cakeLP, accounts[2], 20, accounts[0])
+        await resetTokenBalanceToAmount(cakeLP, accounts[3], 30, accounts[0])
+        await resetTokenBalanceToAmount(cakeLP, accounts[4], 40, accounts[0])
     })
+
+    async function resetTokenBalanceToAmount(token, account, tokenAmount, owner) {
+            let tokenSymbol = (await token.symbol())
+
+            let accountBalance = (await token.balanceOf(account)).toNumber()
+            console.log(">>> accountBalance0: ", accountBalance, tokenSymbol)
+            // transfer all tokens back to owner 
+            if (accountBalance > 0) {
+                await token.transfer(owner, accountBalance, {from: account})
+            }
+            let accountBalance1 = (await token.balanceOf(account)).toNumber()
+            console.log(">>> accountBalance1: ", accountBalance1, tokenSymbol)
+           
+            if (tokenAmount > 0) {
+                await token.transfer(account, tokenAmount)
+
+                let accountBalance2 = (await token.balanceOf(account)).toNumber()
+                console.log(">>> accountBalance2: ", accountBalance2, tokenSymbol)
+            }
+    }
 
 
     it("starting a new reward phase should increase the reward balance", async () => {
@@ -73,22 +108,6 @@ contract("StakingRewardPool", accounts => {
     
         let contractRewards = (await etb.balanceOf(pool.address)).toNumber()
 
-        // rewards data
-        // let data = await pool.calculateRewards()
-        // console.log(">>> rewardData: ", 
-        //     "quota:", data[0].toNumber(), 
-        //     "delta_interval:", data[1].toNumber(), 
-        //     "rate:", data[2].toNumber(), 
-        //     "reward:", data[3].toNumber()
-        // )
-
-        // rewards weight
-        // let weights = await pool.stakingWeights(start, end, accounts[0])
-        // console.log(">>> weights: ", 
-        //     "staker:", weights[0].toNumber(), 
-        //     "total:", weights[1].toNumber(), 
-        // )
-
         // end stake
         await pool.endStake()
 
@@ -97,6 +116,75 @@ contract("StakingRewardPool", accounts => {
 
         assert.equal(rewardEarned, contractRewards, "Reward earned should equal the contract reward for this phase")
     })
+
+
+    it("stake reward should be proportional to the amount of tokens staked", async () => {
+
+        let pool = await StakingRewardPool.deployed()
+        let cakeLP = await CakeLP.deployed()
+        let etb = await ETB.deployed()
+
+        // start a new reward phase
+        let deltaTime = 7 * 24 * 60 * 60 // 7 days
+        let reward = 5 * deltaTime // 5 tokens per per second for 7 days => 3,024,000 tokens
+        let start = Math.round(new Date().getTime() / 1000)
+        
+        let end = start + deltaTime
+
+        await etb.approve(pool.address, reward);
+        await pool.newRewardPhase(reward, start, end);
+
+        // deposit LP tokens 
+        let stake1Amount = 10
+        await cakeLP.approve(pool.address, stake1Amount, {from: accounts[1]})
+        await pool.deposit(stake1Amount, {from: accounts[1]})
+
+        let stake2Amount = 20
+        await cakeLP.approve(pool.address, stake2Amount, {from: accounts[2]})
+        await pool.deposit(stake2Amount, {from: accounts[2]})
+
+        // stake LP tokens 
+        await pool.startStake(stake1Amount, {from: accounts[1]})
+        await pool.startStake(stake2Amount, {from: accounts[2]})
+
+        // wait 7 days
+        await helper.advanceTimeAndBlock(deltaTime);
+      
+        let rewardBalance1Before = await getRewardBalance(accounts[1])
+        let rewardBalance2Before = await getRewardBalance(accounts[2])
+
+        // end stakes
+        await pool.endStake({from: accounts[1]})
+
+        data2 = await pool.calculateRewards({from: accounts[1]})
+        console.log(">>> rewardData2b: ", 
+            "quota:", data2[0].toNumber(), 
+            "delta_interval:", data2[1].toNumber(), 
+            "rate:", data2[2].toNumber(), 
+            "reward:", data2[3].toNumber()
+        )
+
+        data2 = await pool.stakingWeights(start, end, accounts[1])
+        console.log(">>> rewardData2b: ", 
+            "staker:", data2[0].toNumber(), 
+            "total:", data2[1].toNumber()
+        )
+
+        data2 = await pool.stakesWeight(accounts[1], start, end)
+        console.log(">>> stakesWeightb:", data2.toNumber())
+
+
+        await pool.endStake({from: accounts[2]})
+
+        let rewardBalance1After = await getRewardBalance(accounts[1])
+        let rewardBalance2After = await getRewardBalance(accounts[2])
+
+        let rewardEarned1 = rewardBalance1After - rewardBalance1Before
+        let rewardEarned2 = rewardBalance2After - rewardBalance2Before
+
+        assert.equal( Math.floor(rewardEarned2 / rewardEarned1), 2, "Reward earned by account2 should be double that of account1")
+    })
+
 
 
     async function deposit(depositAmount) {
