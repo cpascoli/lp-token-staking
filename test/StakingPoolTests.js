@@ -89,7 +89,7 @@ contract("StakingPool", accounts => {
 
         // end stake
         let balanceBefore = await getBalance()
-        await pool.endStake()
+        await pool.endStake(1)
         let balanceAfter = await getBalance()
 
         assert.equal(balanceAfter, balanceBefore + stakedAmount, "Invalid account balance after end stake")
@@ -110,7 +110,7 @@ contract("StakingPool", accounts => {
 
         // end stake
         let stakedBalanceBefore = await getStakedBalance()
-        await pool.endStake()
+        await pool.endStake(1)
         let stakedBalanceAfter = await getStakedBalance()
 
         assert.equal(stakedBalanceAfter, stakedBalanceBefore - stakedAmount, "Invalid staked balance after end stake")
@@ -129,7 +129,7 @@ contract("StakingPool", accounts => {
         await pool.deposit(depositAmount)
 
         await truffleAssert.reverts(
-              pool.endStake()
+              pool.endStake(1)
         )
     })
 
