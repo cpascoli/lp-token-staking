@@ -44,7 +44,10 @@ module.exports = {
       accounts: 5,
       defaultEtherBalance: 500,
       blockTime: 3
-    }
+    },
+    develop: {
+      port: 7545
+   }
 
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.

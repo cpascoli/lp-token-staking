@@ -11,21 +11,31 @@ contract StakingRewardPool is StakingPool  {
     using SafeMath for uint256;
 
     struct RewardPhase {
+        uint id;
+
         uint reward;
         uint from;
         uint to;
 
-
         uint totalRewardPaid; // the total reward paid in the reward phase
-        uint pendingStaked; // the additional tokens staked since lastUpdated timestamp
+        uint pendingStaked; // tokens currently staked
         //uint averageAmountStakedTotal; // average tokens staked since start of staking period
         uint totalStakedWeight; // sum (tokens_staked * time_staked)
-        uint lastUpdated; // when the total & average tokens staked were last updated
+        uint lastUpdated; // when the totalStakedWeight was last updated (after last stake was ended)
     }
 
     struct StakeReward {
         uint rewardPhaseId;  // the id of the reward phase that this stake belogs to
         uint rewardPaid;
+    }
+
+    struct RewardInfo {
+        uint reward;
+        uint rewardRate;
+        uint stakeAmount;
+        uint stakedInterval;
+        uint stakeWeight;
+        uint totalStakedWeight;
     }
 
     IERC20 internal rewardToken;
@@ -35,13 +45,27 @@ contract StakingRewardPool is StakingPool  {
 
     uint constant quotaPrecision = 100 * 100 * 100;
 
-    event RewardInfo(uint amountStaked, uint rewardRate, uint stakerQuota, uint stakeWeight, uint totalStakedWeight, uint totalRewardPaid, uint reward);
+    //event RewardInfo(uint amountStaked, uint rewardRate, uint stakerQuota, uint stakeWeight, uint totalStakedWeight, uint totalRewardPaid, uint reward);
     event RewardUpdate(uint amountStaked, uint totalStakedWeight, uint pendingStaked, uint pendingInterval, uint pendingWeight, uint totalPendingStaked);
     event RewardCalcInfo(uint stakeAmount, uint rewardRate, uint stakedInterval, uint phaseInterval, uint stakeWeight, uint totalStakedWeight, uint totalRewardPaid, uint reward);
 
     constructor(address _rewardTokenAddress, address _lpTokenAddress) StakingPool(_rewardTokenAddress, _lpTokenAddress) {
         rewardToken = IERC20(_rewardTokenAddress);
     }
+
+    
+    function getStakeRewardPhases() public view returns (StakeReward[] memory)  {
+
+        return stakeRewardPhase[msg.sender];
+    }
+    
+    function rewardRateForPhase(RewardPhase memory phase) internal pure returns (uint) {
+        uint phaseInterval = phase.to.sub(phase.from);
+        uint rate = phase.reward.div(phaseInterval);
+
+        return rate;
+    }
+
 
     // Setup Reqards phase
     // - rewards work in phases. We will vote periodically for a new phase of the staking reward. For each phase we will decide the amount of token distributed per day, and the duration
@@ -50,15 +74,27 @@ contract StakingRewardPool is StakingPool  {
         require(to > from, "Invalid reward interval");
         require(rewardPhases.length == 0 || from > rewardPhases[rewardPhases.length-1].to, "Invalid phase start time");
 
-        rewardPhases.push(RewardPhase(reward, from, to, 0, 0, 0, block.timestamp));
+        rewardPhases.push(RewardPhase(rewardPhases.length+1, reward, from, to, 0, 0, 0, block.timestamp));
         
         depositReward(reward);
     }
 
+    function deleteRewardPhase(uint index) public onlyOwner {
+        require(rewardPhases.length > index, "Invalid reward phase index");
+        for (uint i=index; i<rewardPhases.length-1; i++) {
+            rewardPhases[i] = rewardPhases[i+1];
+        }
+        rewardPhases.pop();
+    }
+
+    function rewardPhasesCount() public view returns (uint) {
+        return rewardPhases.length;
+    }
 
     function rewardBalance() public view returns (uint) {
         return rewardToken.balanceOf(address(this));
     }
+
 
 
     // Deposit ETB token reeards
@@ -70,101 +106,108 @@ contract StakingRewardPool is StakingPool  {
 
 
     function startStake(uint amount) public override {
-        require(rewardPhases.length > 0, "No reward phase found");
-        RewardPhase memory phase = rewardPhases[rewardPhases.length-1];
-        require(phase.from <= block.timestamp && phase.to > block.timestamp, appendUintToString("No active reward phase found: ", block.timestamp));
+        uint phaseId = getCurrentRewardPhaseId();
+        require(phaseId > 0, "No active reward phase found");
 
-        super.startStake(amount);  // 1699963246.
+        super.startStake(amount);
 
+        RewardPhase storage phase = rewardPhases[phaseId-1];
         uint t0 = Math.max(phase.lastUpdated, phase.from);
-        uint pendingInterval =  block.timestamp.sub(t0);
+        uint pendingInterval = block.timestamp.sub(t0);
 
         // stake weight := (token amount staked) * (time interval staked) 
         uint pendingStaked = phase.pendingStaked;
-        uint pendingWeight = pendingStaked.mul(pendingInterval);
+        uint pendingWeight = phase.pendingStaked.mul(pendingInterval);
        
         // update average token staked so far
-        RewardPhase storage currentPhase = rewardPhases[rewardPhases.length-1];
-        currentPhase.totalStakedWeight = currentPhase.totalStakedWeight.add(pendingWeight);
-        currentPhase.pendingStaked = currentPhase.pendingStaked.add(amount);
-        currentPhase.lastUpdated = block.timestamp;
+        phase.totalStakedWeight = phase.totalStakedWeight.add(pendingWeight);
+        phase.pendingStaked = phase.pendingStaked.add(amount);
+        phase.lastUpdated = block.timestamp;
 
-        emit RewardUpdate(amount, currentPhase.totalStakedWeight, pendingStaked, pendingInterval, pendingWeight, currentPhase.pendingStaked);
+        emit RewardUpdate(amount, phase.totalStakedWeight, pendingStaked, pendingInterval, pendingWeight, phase.pendingStaked);
 
-        stakeRewardPhase[msg.sender].push(StakeReward(rewardPhases.length, 0));
+        // associate the stake to the current reward phase
+        stakeRewardPhase[msg.sender].push(StakeReward(phase.id, 0));
     }
+
+
 
 
     function endStake(uint stakeId) public override {
         require(rewardPhases.length > 0, "No reward phase found");
-        RewardPhase memory phase = rewardPhases[rewardPhases.length-1];
-        require(phase.from < block.timestamp && phase.to >= block.timestamp, appendUintToString("No active reward phase found: ", block.timestamp));
+
+        // get the reward phase associated to the stake
+        StakeReward memory stakeReward = stakeRewardPhase[msg.sender][stakeId-1];
+        RewardPhase memory phase = rewardPhases[stakeReward.rewardPhaseId-1];
+        require(phase.from > 0 && phase.to > 0, appendUintToString("No active reward phase found: ", block.timestamp));
         
         Stake memory stake = stakes[msg.sender][stakeId-1];
 
         super.endStake(stakeId);
 
-        uint pendingInterval =  block.timestamp.sub(phase.lastUpdated);
+        // calculate reward
+        RewardInfo memory rewardInfo = calculateReward(stakeId);
+        
+        // uint pendingStakedUpdated = phase.pendingStaked.sub(stake.amount);
+        // uint totalStakedWeightUpdated = phase.totalStakedWeight.add(pendingWeight);
 
-        // stake weight := (token amount staked) * (time interval staked) 
-        uint pendingStaked = phase.pendingStaked;
-        uint pendingWeight = pendingStaked.mul(pendingInterval);
-       
-        // update average token staked so far
-        RewardPhase storage currentPhase = rewardPhases[rewardPhases.length-1];
-        currentPhase.totalStakedWeight = currentPhase.totalStakedWeight.add(pendingWeight);
-        currentPhase.pendingStaked = currentPhase.pendingStaked.sub(stake.amount);
+        RewardPhase storage currentPhase = rewardPhases[stakeReward.rewardPhaseId-1];
+        currentPhase.pendingStaked = phase.pendingStaked.sub(stake.amount);
+        currentPhase.totalStakedWeight = rewardInfo.totalStakedWeight; //totalStakedWeightUpdated;
         currentPhase.lastUpdated = block.timestamp;
 
-        emit RewardUpdate(0, currentPhase.totalStakedWeight, pendingStaked, pendingInterval, pendingWeight, currentPhase.pendingStaked);
-
-        // calculate reward
-        (uint reward, uint rewardRate, uint amount, uint stakeWeight, uint totalStakedWeight) = calculateReward(stakeId);
-        
-        uint stakerQuota = quotaPrecision.mul(stakeWeight).div(totalStakedWeight);
-
-        // transfer reward to the useer
-        if (reward > 0) {
-            uint balance = rewardBalance();
-            require(balance >= reward, appendUintToString("not enough balance to pay reward: ", reward));
-
-            // subtract the weight of the stake being paid 
-            currentPhase.totalStakedWeight = currentPhase.totalStakedWeight.sub(stakeWeight);
-            currentPhase.totalRewardPaid = currentPhase.totalRewardPaid.add(reward);
-            emit RewardInfo(amount, rewardRate, stakerQuota, stakeWeight, totalStakedWeight, currentPhase.totalRewardPaid, reward);
-
-            //stakeRewardPhase[msg.sender][stakeId-1].rewardPaid = reward;
-            rewardToken.transfer(msg.sender, reward);
+        //uint stakerQuota = quotaPrecision.mul(rewardInfo.stakeWeight).div(rewardInfo.totalStakedWeight);
+        if (rewardInfo.reward > 0) {
+            payReward(msg.sender, rewardInfo, stakeId, stakeReward.rewardPhaseId);
         }
     }
 
 
-    // calculate rewards
-    // - calculated proportionally to the time you spent in the pool, and your weight in the pool
-    function calculateReward(uint stakeId) public returns(uint, uint, uint, uint, uint) {
+
+    // calculate rewards  proportionally to the time the stake spend in the pool, 
+    // and the relative weight of the stake in the pool so far
+    function calculateReward(uint stakeId) public view returns (RewardInfo memory) {
         require(stakeId != 0, "StakeId can't be 0");
         require(stakeId <= stakes[msg.sender].length, "stakeId not found");
         require(stakeId <= stakeRewardPhase[msg.sender].length, "reward phase not found for stake");
         Stake memory stake = stakes[msg.sender][stakeId-1];
-        require(stake.to != 0, "Stake not ended. Can't calculate reward.");
 
+        // get the reward phase associated to the stake 
         StakeReward memory stakeReward = stakeRewardPhase[msg.sender][stakeId-1];
-
-        // reward phase associated to the stake 
         RewardPhase memory rewardPhase = rewardPhases[stakeReward.rewardPhaseId - 1];
-        uint stakeEnd = Math.min(stake.to, rewardPhase.to);
+
+        // Calculate stakeWeight := stake_amount * stake_interval
+        // the stakedInterval used to calculate the reward for this stake depends on 
+        // whether the stake ended and the end date of the reward phase:
+        // 
+        // 1. the stake ended (e.g stake.to > 0) for the end interval we use  min(stake.to, rewardPhase.to)
+        // 2. the stake did not end (e.g stake.to == 0) or the end interval we use min(block.stimestamp, rewardPhase.to)
+        uint stakeEnd = Math.min((stake.to > 0)? stake.to : block.timestamp, rewardPhase.to);
         uint stakedInterval = stakeEnd.sub(stake.from);
         uint stakeWeight = stake.amount.mul(stakedInterval);
-        uint totalStakedWeight = rewardPhase.totalStakedWeight;
 
+        // Calculate pendingWeight := pendingStaked * pendingInterval
+        // pendingStaked includes the amount staked by this stake
+        uint pendingInterval = Math.min(rewardPhase.to, block.timestamp).sub(Math.min(rewardPhase.lastUpdated, rewardPhase.to));
+        uint pendingWeight = rewardPhase.pendingStaked.mul(pendingInterval);
+
+        // add pendingWeight to totalStakedWeight
+        uint totalStakedWeight = rewardPhase.totalStakedWeight.add(pendingWeight);
+
+        // Calculate available reward
+        // the time interval between the start of the reward phase and the time used to calculate the reward fot this stake
         uint phaseInterval = stakeEnd.sub(rewardPhase.from);
 
         uint rewardRate = rewardRateForPhase(rewardPhase);
         uint availableReaward = rewardRate.mul(phaseInterval).sub(rewardPhase.totalRewardPaid);
 
-        require(stakeWeight <= totalStakedWeight, "Invalid stake weight");
+        // require(stakeWeight <= totalStakedWeight, "Invalid stake weight");
+        if (stakeWeight > totalStakedWeight) {
+            return RewardInfo(0, rewardRate, stake.amount, stakedInterval, stakeWeight, totalStakedWeight);
+        }
 
-        uint reward = availableReaward.mul(stakeWeight).div(totalStakedWeight);
+        // Calculate reward
+        uint reward =  (totalStakedWeight == 0)? 0 : availableReaward.mul(stakeWeight).div(totalStakedWeight);
 
         // calculate reward for this stake
         // if this is the only activ stake than the reward is based on the stake interval
@@ -172,24 +215,45 @@ contract StakingRewardPool is StakingPool  {
         // uint reward = (stakeWeight == totalStakedWeight) ?  rewardRate.mul(stakedInterval) : 
         //                                                     availableReaward.mul(stakeWeight).div(totalStakedWeight);
 
-        emit RewardCalcInfo(stake.amount, rewardRate, stakedInterval, phaseInterval, stakeWeight, totalStakedWeight, rewardPhase.totalRewardPaid, reward);
+        // emit RewardCalcInfo(stake.amount, rewardRate, stakedInterval, phaseInterval, stakeWeight, totalStakedWeight, rewardPhase.totalRewardPaid, reward);
 
-        return (reward, rewardRate, stake.amount, stakeWeight, totalStakedWeight);
-    }
- 
-
-    function getCurrentRewardPhase() internal view returns (RewardPhase memory)  {
-        require(rewardPhases.length > 0, "No reward phase found");
-
-        return rewardPhases[rewardPhases.length-1];
+        return RewardInfo(reward, rewardRate, stake.amount, stakedInterval, stakeWeight, totalStakedWeight);
     }
 
-    
-    function rewardRateForPhase(RewardPhase memory phase) internal pure returns (uint) {
-        uint phaseInterval = phase.to.sub(phase.from);
-        uint rate = phase.reward.div(phaseInterval);
 
-        return rate;
+    function payReward(address account, RewardInfo memory rewardInfo, uint stakeId, uint rewardPhaseId) internal {
+
+        // transfer reward to the useer
+        uint balance = rewardBalance();
+        require(balance >= rewardInfo.reward, appendUintToString("not enough balance to pay reward: ", rewardInfo.reward));
+
+        RewardPhase storage currentPhase = rewardPhases[rewardPhaseId-1];
+
+        // subtract the weight of the stake being paid 
+        currentPhase.totalStakedWeight = currentPhase.totalStakedWeight.sub(rewardInfo.stakeWeight);
+        currentPhase.totalRewardPaid = currentPhase.totalRewardPaid.add(rewardInfo.reward);
+        //emit RewardInfo(amount, rewardRate, stakerQuota, stakeWeight, totalStakedWeight, currentPhase.totalRewardPaid, reward);
+
+        StakeReward storage stakeReward = stakeRewardPhase[account][stakeId-1];
+        stakeReward.rewardPaid = rewardInfo.reward;
+
+        rewardToken.transfer(account, rewardInfo.reward);
+
+    }
+
+    function getCurrentRewardPhaseId() public view returns (uint) {
+        if (rewardPhases.length == 0) return 0;
+        for (uint i=rewardPhases.length; i>0; i--) {
+            RewardPhase memory phase = rewardPhases[i-1];
+            if (phase.from <= block.timestamp && phase.to >= block.timestamp) {
+                return phase.id;
+            }
+        }
+        return 0;
+    }
+
+    function getTimestamp() public view returns (uint) {
+        return block.timestamp;
     }
 
 

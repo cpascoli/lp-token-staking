@@ -30,6 +30,43 @@ contract("StakingRewardPool", accounts => {
 
 
 
+    it("calculate reward", async () => {
+
+        let pool = await StakingRewardPool.deployed()
+        let etb = await ETB.deployed()
+        let cakeLP = await CakeLP.deployed()
+
+        // deposit LP tokens to stake
+        let stakeAmount = 10
+        await cakeLP.approve(pool.address, stakeAmount, {from: accounts[1]})
+        await pool.deposit(stakeAmount, {from: accounts[1]})
+
+
+        // start a new reward phase
+        let period = 1000
+        let reward = 1 * period  
+
+        await etb.approve(pool.address, reward);
+      
+        let latestBlock = await web3.eth.getBlock('latest')
+        let start = latestBlock.timestamp
+        let end = start + period
+
+        await pool.newRewardPhase(reward, start, end);
+
+        let contractRewards = (await etb.balanceOf(pool.address)).toNumber()
+        let rewardBalanceBefore = await getRewardBalance(accounts[0])
+     
+        // stake LP tokens 
+        await pool.startStake(stakeAmount, {from: accounts[1]})
+
+        // wait 
+        await helper.advanceTimeAndBlock(200);
+        var rewardInfo = await pool.calculateReward(1, {from: accounts[1]})
+        await helper.advanceTimeAndBlock(200);
+    })
+
+
     it("starting a new reward phase should setup the reward phase and reward token balance in the pool", async () => {
         let pool = await StakingRewardPool.deployed()
         let etb = await ETB.deployed()
@@ -47,8 +84,9 @@ contract("StakingRewardPool", accounts => {
 
         // start a new reward phase
         await pool.newRewardPhase(reward, start, end);
-        let phase = await pool.rewardPhases(0);
-       
+        let count = await pool.rewardPhasesCount()
+        let phase = await pool.rewardPhases(count-1);
+
         // verify reward phase data
         assert.equal(phase.from.toNumber(), start, "Invalid reward phase start")
         assert.equal(phase.to.toNumber(), end, "Invalid reward phase end")
@@ -63,11 +101,13 @@ contract("StakingRewardPool", accounts => {
     it("The reward for 1 stake across the full reward phase should equal the full reward", async () => {
 
         let pool = await StakingRewardPool.deployed()
+        let cakeLP = await CakeLP.deployed()
         let etb = await ETB.deployed()
 
-        // deposit LP tokens 
+        // deposit LP tokens to stake
         let stakeAmount = 10
-        await deposit(stakeAmount)
+        await cakeLP.approve(pool.address, stakeAmount, {from: accounts[1]})
+        await pool.deposit(stakeAmount, {from: accounts[1]})
 
         // start a new reward phase of 1 week. 
         // reward: 5 tokens per per second for 7 days => 3,024,000 tokens
@@ -84,23 +124,24 @@ contract("StakingRewardPool", accounts => {
         await pool.newRewardPhase(reward, start, end);
 
         let contractRewards = (await etb.balanceOf(pool.address)).toNumber()
-        let rewardBalanceBefore = await getRewardBalance(accounts[0])
+        let rewardBalanceBefore = await getRewardBalance(accounts[1])
      
         // stake LP tokens 
-        await pool.startStake(stakeAmount)
+        await pool.startStake(stakeAmount, {from: accounts[1]})
 
         // wait 7 days
         await helper.advanceTimeAndBlock(week-1);
 
         // end stake
-        await pool.endStake(1)
+        await pool.endStake(1, {from: accounts[1]})
 
-        let rewardBalanceAfter = await getRewardBalance(accounts[0])
+        let rewardBalanceAfter = await getRewardBalance(accounts[1])
         let rewardEarned = rewardBalanceAfter - rewardBalanceBefore
-        
+
         assert.equal(Math.round(rewardEarned / contractRewards), 1, "Reward earned should equal the contract reward for this phase")
     })
 
+ 
 
     it("The reward for 1 only stake should be the total reward accrued since the start of the reward phase", async () => {
 
@@ -448,7 +489,7 @@ contract("StakingRewardPool", accounts => {
 
     async function getRewardBalance(address) {
         let etb = await ETB.deployed()
-        return (await etb.balanceOf(address)).toNumber()
+        return (await etb.balanceOf(address)).toString()
     }
 
     async function resetTokenBalanceToAmount(token, account, tokenAmount, owner) {

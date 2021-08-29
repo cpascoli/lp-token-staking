@@ -22,7 +22,18 @@ contract StakingPool is Wallet  {
     uint public totalStakes;
  
 
-    constructor(address _rewardTokenAddress, address _lpTokenAddress) Wallet(_lpTokenAddress) {
+    constructor(address _rewardTokenAddress, address _lpTokenAddress) Wallet(_lpTokenAddress) {}
+
+
+    function depositAndStartStake(uint256 amount) public {
+        deposit(amount);
+        startStake(amount);
+    }
+
+
+    function endStakeAndWithdraw(uint stakeId) public {
+        endStake(stakeId);
+        withdraw(balances[msg.sender]);
     }
 
 
@@ -68,6 +79,7 @@ contract StakingPool is Wallet  {
         totalStakes = totalStakes.sub(stake.amount);
     }
 
+
     function getStakes() public view returns (Stake[] memory) {
         return stakes[msg.sender];
     }
@@ -85,16 +97,6 @@ contract StakingPool is Wallet  {
 
         return total;
     }
-
-    function depositAndStartStake(uint256 amount) public {
-        deposit(amount);
-        startStake(amount);
-    }
-
-    function endStakeAndWithdraw(uint stakeId) public {
-        endStake(stakeId);
-        withdraw(balances[msg.sender]);
-     }
 
 
     function reset() public virtual onlyOwner {
