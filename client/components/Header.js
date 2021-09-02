@@ -135,7 +135,7 @@ export default class Header extends React.Component {
                                 { (balanceCake !== undefined) && <h4 className="m-2"> {balanceCake} Cake-LP </h4> }
                             </Col>
 
-                            <Col md={6}><h5>ETB TOKEN STAKING DAPP </h5></Col>
+                            <Col md={6}>&nbsp;</Col>
 
                             <Col md={2}>
                                 {(account &&

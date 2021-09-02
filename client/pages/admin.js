@@ -167,7 +167,7 @@ export default class AdminPage extends React.Component {
                 }
               
                 <div style={{textAlign:"center"}}>
-                    <Button onClick={this.toggleCreateRewardPhaseModal}>Create New Rewrd Phase</Button>
+                    <Button onClick={this.toggleCreateRewardPhaseModal}>Create New Reward Phase</Button>
                 </div>
 
             </Page>
