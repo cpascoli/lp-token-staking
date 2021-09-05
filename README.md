@@ -1,6 +1,11 @@
-# lp-token-staking
+# Staking Dapp for the ETB token
 
-A NextJS app to stake LP tokens into a contract and earn reward tokens in return.
+A Dapp to stake Cake-LP tokens into a pool contract and earn ETB tokens in return.
+
+This project was developed for the ["ETB Project #2"](https://github.com/jklepatch/eattheblocks/tree/master/etb-projects/project2-staking) Hackathon organised by [EatTheBlocks](https://www.youtube.com/c/EatTheBlocks/about)
+
+
+Features implemented:
 
 - The staking contract allows an admin to allocate a certain amount of reward tokens to a period of time called "reward phase".
 - Users staking their LP tokens into the pool during a reward phase, will earn a certain amount of reward tokens.
