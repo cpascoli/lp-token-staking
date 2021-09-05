@@ -17,21 +17,32 @@ truffle test      // runs the test
 
 ```
 
+### Setup environment
+
+Install node
+`brew install node`  (on Mac)
+
+Install truffle
+`npm install -g truffle`
+
 
 ### To run the dapp locally
 
-1. Start a local blockchain and deploy the contracts in truffle
+1. Install dependencies
+`npm install`   
+
+2. Start a local blockchain and deploy the contracts in truffle
 ```
 truffle develop   // starts a local blockchain on port 7545
 truffle migrate   // deploy the contracts
 ```
 
-2. Start the nextjs server
+3. Start the nextjs server
 `npm run dev`
 
-3. Connect Metamask to the local netwotk on http://127.0.0.1:7545/
+4. Connect Metamask to the local netwotk on http://127.0.0.1:7545/
 
-4. Access the dapp
+5. Access the dapp
 `http://localhost:3000/`
 
 
