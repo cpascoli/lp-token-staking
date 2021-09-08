@@ -8,6 +8,11 @@ import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 contract Wallet is Ownable {
 
     using SafeMath for uint256;
+
+    event Deposited(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+
+
     IERC20 internal cakeLP;
 
     // CakeLP token balances
@@ -41,14 +46,16 @@ contract Wallet is Ownable {
         }
         
         cakeLP.transferFrom(msg.sender, address(this), amount);
-    }
 
+        emit Deposited(msg.sender, amount);
+    }
 
     function withdraw(uint256 amount) public {
         require(balances[msg.sender] >= amount, "Insufficient token balance");
 
         balances[msg.sender] = balances[msg.sender].sub(amount);
         cakeLP.transfer(msg.sender, amount);
-    }
 
+        emit Withdrawn(msg.sender, amount);
+    }
 }

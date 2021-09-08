@@ -1,6 +1,8 @@
 
-
-.datepicker{
-    /* background-color: red; */
-    /* max-width: 100%; */
+.card > * {
+    background: white;
 }
+
+/* .card-body {
+    background: gray;
+}  */

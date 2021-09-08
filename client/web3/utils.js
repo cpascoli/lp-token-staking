@@ -2,10 +2,11 @@ import { myWeb3, eth } from './provider'
 
 // from int to string
 export const toTokenDecimals = async (token, amount) => {
+    
     const decimals = await token.decimals.call()
     const digits =  myWeb3.utils.toBN('10').pow(decimals); 
-
-    const tokenDecimals = myWeb3.utils.toBN(amount).mul(digits).toString()
+    const factor = myWeb3.utils.toBN(10000)
+    const tokenDecimals = myWeb3.utils.toBN( Math.floor(amount * 10000) ).mul(digits).div(factor).toString()
 
     console.log(">>>> toTokenDecimals", amount, tokenDecimals)
     return tokenDecimals
@@ -18,8 +19,6 @@ export const toTokenUnits = async (token, amount) => {
     const unitsString = myWeb3.utils.toBN(amount).div(digits).toString()
     const units = parseInt(unitsString)
     
-    console.log(">>>> toTokenUnits", amount, unitsString, units)
-
     return units
 }
 

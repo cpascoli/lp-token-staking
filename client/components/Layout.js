@@ -2,12 +2,12 @@ import Head from 'next/head'
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-export const Center = ({ children, style }) => (
+export const Center = ({ children, style, maxWidth }) => (
     <div style={style}>
       {children}
       <style jsx>{`
         div {
-          max-width: 1000px;
+          max-width: ${maxWidth?maxWidth:1000}px;
           margin: 0 auto;
           padding: 20px;
         }

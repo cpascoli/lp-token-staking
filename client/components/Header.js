@@ -16,17 +16,14 @@ export default class Header extends React.Component {
 
     constructor(props) {
         super(props);
-
         this.state = {}
         this.handleAccount = this.handleAccount.bind(this);
-        console.log(">>> Header props: ", props)
     }
 
     componentDidMount() {
         this.reload()
 
         ethereum.on('chainChanged', (chainId) => {
-            console.log(">>> chainId: ", chainId)
             // Handle the new chain.
             // Correctly handling chain changes can be complicated.
             // We recommend reloading the page unless you have good reason not to.
@@ -47,9 +44,7 @@ export default class Header extends React.Component {
 
 
     connect = () => {
-        console.log(">>> connect")
         ethereum.request({ method: 'eth_requestAccounts' }).then(accounts => {
-            console.log(">>> connected accounts: ", accounts)
             let account = accounts.length > 0? accounts[0] : undefined
             this.reload()
             this.handleAccount(account)
@@ -73,10 +68,8 @@ export default class Header extends React.Component {
 
     loadAccount = () => {
         getAccount().then((account) => {
-            console.log(">>> loadAccount success:", account)
             this.handleAccount(account)
         }).catch(error => {
-            console.log(">>> loadAccount erroor:", error)
             this.setState({ error: error.message })
             this.props.setAccountConnected(false)
         })
@@ -93,7 +86,6 @@ export default class Header extends React.Component {
                 balanceCake: data.units
             })
         }).catch(error => {
-            console.log(">>> error loading balance:", error)
             this.setState({ error: error.message })
         })
     }
@@ -101,7 +93,6 @@ export default class Header extends React.Component {
 
     loadBlockInfo = () => {
         myWeb3.eth.getBlock().then((block) => {
-            console.log(">>> loadBlockInfo - block", block.number, new Date(block.timestamp * 1000))
             this.setState({
                 blockNumber: block.number,
                 blockTimestamp: block.timestamp
@@ -121,42 +112,38 @@ export default class Header extends React.Component {
         // const balanceCake = this.state && this.state.balanceCake
         const account = this.state && this.state.account
 
-
         return (
             <header >
-           
-                    <Container fluid>
-                        <Row className="">
-                            
-                            <Col md={2}>
-                               { (balanceETB !== undefined) && <h4 className="m-2"> {balanceETB} ETB</h4> }
-                            </Col>
-                            <Col md={2}>
-                                { (balanceCake !== undefined) && <h4 className="m-2"> {balanceCake} Cake-LP </h4> }
-                            </Col>
+                <Container fluid>
+                    <Row className="">
+                        <Col md={2}>
+                            { (balanceETB !== undefined) && <h4 className="m-2"> {balanceETB} ETB</h4> }
+                        </Col>
+                        <Col md={2}>
+                            { (balanceCake !== undefined) && <h4 className="m-2"> {balanceCake} Cake-LP </h4> }
+                        </Col>
 
-                            <Col md={6}>&nbsp;</Col>
+                        <Col md={6}>&nbsp;</Col>
 
-                            <Col md={2}>
-                                {(account &&
-                                    <DropdownButton
-                                        id="menu"
-                                        variant="outline-primary"
-                                        title={account}
-                                    >
-                                        <Dropdown.Item eventKey="1" disabled >Block Info</Dropdown.Item>
-                                        <Dropdown.Divider />
-                                        <Dropdown.Item eventKey="1" disabled >number: {blockNumber} </Dropdown.Item>
-                                        <Dropdown.Item eventKey="1" disabled >date: {blockDateFormatted}</Dropdown.Item>
-                                        <Dropdown.Divider />
-                                        <Dropdown.Item eventKey="2" onClick={() => this.reloadPressed()}>Reload</Dropdown.Item>
-                                    </DropdownButton>
-                                ) || <Button name="connect" variant="primary" onClick={() => this.connect()} >Connect Wallet</Button>}
+                        <Col md={2}>
+                            {(account &&
+                                <DropdownButton
+                                    id="menu"
+                                    variant="outline-primary"
+                                    title={account}
+                                >
+                                    <Dropdown.Item eventKey="1" disabled >Block Info</Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item eventKey="1" disabled >number: {blockNumber} </Dropdown.Item>
+                                    <Dropdown.Item eventKey="1" disabled >date: {blockDateFormatted}</Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item eventKey="2" onClick={() => this.reloadPressed()}>Reload</Dropdown.Item>
+                                </DropdownButton>
+                            ) || <Button name="connect" variant="primary" onClick={() => this.connect()} >Connect Wallet</Button>}
 
-                            </Col>
-                        </Row>
-                    </Container>
-              
+                        </Col>
+                    </Row>
+                </Container>
 
                 <style jsx>{`
                     header {

@@ -2,9 +2,9 @@ import React from 'react'
 import { Table, Alert, Button } from 'react-bootstrap'
 
 import Header from "../components/Header" 
-import RewardPhase from "../components/RewardPhase"
+import RewardPhaseInfo from "../components/RewardPhaseInfo"
 import { Page, Center } from "../components/Layout"
-import { getRewardPhases } from "../web3/reward_phases"
+import { getRewardPeriods } from "../web3/reward_phases"
 import { AlertDismissible } from "../components/AlertDismissible"
 import  CreateRewardPhaseForm from "../components/CreateRewardPhaseForm"
 
@@ -31,7 +31,7 @@ export default class AdminPage extends React.Component {
 
     reload() {
         console.log("reload AdminPage")
-        this.loadRewardPhases()
+        this.loadRewardPeriods()
     }
  
     setAccountConnected = (connected) => {
@@ -48,10 +48,10 @@ export default class AdminPage extends React.Component {
     }
 
 
-    async loadRewardPhases() {
-        getRewardPhases().then((phases) => {
+    async loadRewardPeriods() {
+        getRewardPeriods().then((periods) => {
             this.setState({
-                rewardPhases: phases.reverse(),
+                rewardPeriods: periods.reverse(),
             })
         }).catch( error => {
             console.log(">>> error loading reward phases:", error)
@@ -94,7 +94,7 @@ export default class AdminPage extends React.Component {
 
     render() {
 
-        const { accountConnected, showCreateRewardPhaseModal, rewardPhases } = this.state // Get the state
+        const { accountConnected, showCreateRewardPhaseModal, rewardPeriods } = this.state // Get the state
 
 
         if (!accountConnected) return (
@@ -108,14 +108,13 @@ export default class AdminPage extends React.Component {
             </Page>
         )
 
-        // const rewardPhases = this.state && this.state.rewardPhases
-        const rewardPhasesRows = rewardPhases && rewardPhases.map((item, idx) => {
+        const rewardPeriodsRows = rewardPeriods && rewardPeriods.map((item, idx) => {
             return (
-                <RewardPhase key={item.id} {...item}/>
+                <RewardPhaseInfo key={item.id} {...item}/>
             )
         })
 
-        let lastRewardPhase = this.state.rewardPhases && this.state.rewardPhases.length > 0 && this.state.rewardPhases[0]
+        let lastRewardPeriod = this.state.rewardPeriods && this.state.rewardPeriods.length > 0 && this.state.rewardPeriods[0]
 
         return (
 
@@ -129,7 +128,7 @@ export default class AdminPage extends React.Component {
                             handleSuccess={(result) => this.handleSuccess(result)} 
                             handleError={(error, message) => this.handleError(error, message)}
                             allowanceUpdated={() => this.handleAllowanceUpdated()}
-                            startDate={lastRewardPhase && lastRewardPhase.to}
+                            startDate={lastRewardPeriod && lastRewardPeriod.to}
                          />
                     </Modal>
                 )}
@@ -140,12 +139,12 @@ export default class AdminPage extends React.Component {
                 </Center>
 
 
-                { (rewardPhasesRows && rewardPhasesRows.length == 0) &&
+                { (rewardPeriodsRows && rewardPeriodsRows.length == 0) &&
                     <Center className="mt-2">
                         <Alert variant="info"> No reward phase configured</Alert> 
                     </Center>
                 }
-                { rewardPhasesRows && rewardPhasesRows.length > 0 && 
+                { rewardPeriodsRows && rewardPeriodsRows.length > 0 && 
                  <Center> 
                     <Table responsive bordered striped="on">
                           <thead>
@@ -155,12 +154,11 @@ export default class AdminPage extends React.Component {
                                 <th>End Date</th>
                                 <th>Total Reward</th>
                                 <th>Reward / sec</th>
-                                <th>Reward Paid</th>
                                 <th>Currently Staked</th>
                             </tr>
                         </thead>
                         <tbody>
-                            { rewardPhasesRows }
+                            { rewardPeriodsRows }
                         </tbody>
                     </Table>
                  </Center> 

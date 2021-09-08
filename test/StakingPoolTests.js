@@ -49,7 +49,7 @@ contract("StakingPool", accounts => {
         assert.equal(stakedTokensAfter, stakedAmount , "Account should have expected staked tokens balance")
     })
 
-    it("staking multiple times should produce multiple Stakes", async () => {
+    it("staking additional tokens should increate the staked token balance", async () => {
         let pool = await StakingPool.deployed()
 
         // deposit 100 CakeLP 
@@ -59,9 +59,8 @@ contract("StakingPool", accounts => {
         let firstStakeAmount = 30
         await pool.startStake(firstStakeAmount)
 
-        let stakes1 = await pool.getStakes()
-        assert.equal(stakes1.length, 1 , "Account should have 1 stake")
-        assert.equal(stakes1[0].amount, firstStakeAmount , "Invalid amount in 1st stake")
+        let balance1 = await pool.getStakedBalance()
+        assert.equal(balance1, firstStakeAmount , "Invalid staked balance after 1st stake")
 
         let deltaTime = 10
         await helper.advanceTime(deltaTime);
@@ -70,14 +69,11 @@ contract("StakingPool", accounts => {
         let secondStakeAmount = 40
         await pool.startStake(secondStakeAmount)
 
-        let stakes2 = await pool.getStakes()
-        assert.equal(stakes2.length, 2 , "Account should have 2 stakes")
-        assert.equal(stakes2[1].amount, secondStakeAmount , "Invalid amount in 2nd stake")
-
-        assert.equal(parseInt(stakes2[1].from), parseInt(stakes2[0].from) + deltaTime, "Invalid time differences between 2 stakes")
+        let balance2 = await pool.getStakedBalance()
+        assert.equal(balance2, firstStakeAmount + secondStakeAmount , "Invalid staked balance after 2nd stake")
     })
 
-    it("unstaking CaleLP tokens should increase the account balance", async () => {
+    it("unstaking CaleLP tokens should increase the CaleLP balance", async () => {
         let pool = await StakingPool.deployed()
 
         // deposit 100 CakeLP 
@@ -89,13 +85,13 @@ contract("StakingPool", accounts => {
 
         // end stake
         let balanceBefore = await getBalance()
-        await pool.endStake(1)
+        await pool.endStake(stakedAmount)
         let balanceAfter = await getBalance()
 
         assert.equal(balanceAfter, balanceBefore + stakedAmount, "Invalid account balance after end stake")
     })
 
-    it("unstaking CaleLP tokens should descese the staked amount", async () => {
+    it("unstaking CaleLP tokens should decrease the staked balance", async () => {
         let pool = await StakingPool.deployed()
         let cakeLP = await CakeLP.deployed()
 
@@ -110,7 +106,7 @@ contract("StakingPool", accounts => {
 
         // end stake
         let stakedBalanceBefore = await getStakedBalance()
-        await pool.endStake(1)
+        await pool.endStake(stakedAmount)
         let stakedBalanceAfter = await getStakedBalance()
 
         assert.equal(stakedBalanceAfter, stakedBalanceBefore - stakedAmount, "Invalid staked balance after end stake")
@@ -129,7 +125,7 @@ contract("StakingPool", accounts => {
         await pool.deposit(depositAmount)
 
         await truffleAssert.reverts(
-              pool.endStake(1)
+              pool.endStake(100)
         )
     })
 

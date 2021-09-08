@@ -5,24 +5,32 @@ import StakingRewardPool from "./artifacts/StakingRewardPool.json"
 import ETB from "./artifacts/ETB.json"
 import CakeLP from "./artifacts/CakeLP.json"
 
-export const getRewardPhases = async () => {
 
-  const count = await getRewardPhasesCount()
+export const getCurrentRewardPeriod = async () => {
+  const rewardPerdiodId = await getCurrentRewardPeriodId()
+  if (!rewardPerdiodId) return null
 
+  const period = await getRewardPeriod(rewardPerdiodId-1)
+  return period
+}
+
+
+export const getRewardPeriods = async () => {
+
+  const count = await getRewardPeriodsCount()
   if (count == 0) return []
 
   const phases =  Array(count).fill().map( async (_, i) => {
-    const phase = await getRewardPhase(i)
-    console.log(">>> getRewardPhases -  phase: ", i, phase)
+    const period = await getRewardPeriod(i)
 
     return {
-      id: phase.id,
-      from: phase.from,
-      to: phase.to,
-      reward: phase.reward,
-      totalRewardPaid: phase.totalRewardPaid,
-      pendingStaked: phase.pendingStaked,
-      isCurrent: phase.isCurrent,
+      id: period.id,
+      reward: period.reward,
+      from: period.from,
+      to: period.to,
+      lastUpdated: period.lastUpdated,
+      totalStaked: period.totalStaked,
+      rewardPerTokenStaked: period.rewardPerTokenStaked,
     }
   });
  
@@ -30,51 +38,46 @@ export const getRewardPhases = async () => {
 }
 
 
-export const getRewardPhase = async (index) => {
+
+export const getRewardPeriod = async (index) => {
   
   const pool = await getInstance(StakingRewardPool)
-  const rewardPhase = await pool.rewardPhases.call(index)
+  const rewardPhase = await pool.rewardPeriods.call(index)
   const etb = await getInstance(ETB)
   const cakeLP = await getInstance(CakeLP)
 
-  const currentPhaseId = await getCurrentRewardPhaseId()
-
-  console.log(">>> rewardPhase: ", index, rewardPhase, "currentPhaseId: ", currentPhaseId)
+  const currentPhaseId = await getCurrentRewardPeriodId()
 
   return {
       id: rewardPhase.id.toNumber(),
+      reward: await toTokenUnits(etb, rewardPhase.reward),
       from: rewardPhase.from.toNumber(),
       to: rewardPhase.to.toNumber(),
-      reward: await toTokenUnits(etb, rewardPhase.reward),
-      totalRewardPaid: await toNumber(etb, rewardPhase.totalRewardPaid, 4),
-      pendingStaked: await toNumber(cakeLP,  rewardPhase.pendingStaked, 2),
-      totalStakedWeight: await toTokenUnits(cakeLP, rewardPhase.totalStakedWeight),
       lastUpdated: rewardPhase.lastUpdated.toNumber(),
+      totalStaked: await toNumber(cakeLP,  rewardPhase.totalStaked, 4),
+      rewardPerTokenStaked: await toNumber(etb, rewardPhase.rewardPerTokenStaked, 4),
       isCurrent: rewardPhase.id.toNumber() == currentPhaseId
   }
 }
 
-export const getCurrentRewardPhaseId = async () => {
+export const getCurrentRewardPeriodId = async () => {
   const pool = await getInstance(StakingRewardPool)
-  const phaseIdBN = await pool.getCurrentRewardPhaseId.call()
-  console.log(">>>> count: ", phaseId)
+  const phaseIdBN = await pool.getCurrentRewardPeriodId.call()
   const phaseId = phaseIdBN.toNumber()
 
   return (phaseId > 0)? phaseId : undefined
 }
 
 
-export const getRewardPhasesCount = async () => {
+export const getRewardPeriodsCount = async () => {
   const pool = await getInstance(StakingRewardPool)
-  const count = await pool.rewardPhasesCount.call()
-  console.log(">>>> count: ", count)
+  const count = await pool.getRewardPeriodsCount.call()
   
   return count.toNumber()
 }
 
 
-export const createRewardPhase = async (amount, startDate, endDate) => {
-
+export const createRewardPeriod = async (amount, startDate, endDate) => {
     const etb = await getInstance(ETB)
     const account = await getAccount()
     const pool = await getInstance(StakingRewardPool)
@@ -82,21 +85,15 @@ export const createRewardPhase = async (amount, startDate, endDate) => {
     const end = Math.round(endDate.getTime() / 1000)
     const amountDecimals = await toTokenDecimals(etb, amount)
 
-    console.log(">>> createRewardPhase input: ", start, end, amount, amountDecimals)
-
     return new Promise( async (resolve, reject)  => {
 
       try {
         await ethereum.enable()
-
-        const result = await pool.newRewardPhase(amountDecimals, start, end, {from: account} )
-        console.log(">>> createRewardPhase ok - result: ", result)
-  
+        const result = await pool.newRewardPeriod(amountDecimals, start, end, {from: account} )
         resolve(result)
       } catch (error) {
-        console.error(">>> createRewardPhase error: ", error)
+        console.error(">>> createRewardPeriod error: ", error)
         reject(error)
       }
-
     });
 }

@@ -10,18 +10,13 @@ contract StakingPool is Wallet  {
 
     using SafeMath for uint256;
 
-    struct Stake {
-        uint amount;
-        uint from;
-        uint to;
-    }
+    event Staked(address indexed user, uint amount);
+    event UnStaked(address indexed user, uint256 amount);
 
     address[] public stakers; // addresses that have active stakes
-    mapping (address => Stake[]) public stakes;
-
+    mapping (address => uint) public stakes;
     uint public totalStakes;
  
-
     constructor(address _rewardTokenAddress, address _lpTokenAddress) Wallet(_lpTokenAddress) {}
 
 
@@ -31,17 +26,9 @@ contract StakingPool is Wallet  {
     }
 
 
-    function endStakeAndWithdraw(uint stakeId) public {
-        endStake(stakeId);
-        withdraw(balances[msg.sender]);
-    }
-
-
-    function getStakeInfo(uint stakeId) public view returns (Stake memory) {
-        require(stakeId != 0, "Invald stakeId");
-        require(stakes[msg.sender].length >= stakeId, "Stake not found");
-
-        return stakes[msg.sender][stakeId - 1];
+    function endStakeAndWithdraw(uint amount) public {
+        endStake(amount);
+        withdraw(amount);
     }
 
 
@@ -49,53 +36,31 @@ contract StakingPool is Wallet  {
         require(amount > 0, "Stake must be a positive amount greater than 0");
         require(balances[msg.sender] >= amount, "Not enough tokens to stake");
 
-        // move staked tokens from account balance to stakedBalance
+        // move tokens from lp token balance to the staked balance
         balances[msg.sender] = balances[msg.sender].sub(amount);
-
-        // remember new stakers and add new stake amount and timestamp
-        if(stakes[msg.sender].length == 0) {
-            stakers.push(msg.sender);
-        }
-        // add new srake info
-        stakes[msg.sender].push( Stake(amount, block.timestamp, 0) );
+        stakes[msg.sender] = stakes[msg.sender].add(amount); 
        
         totalStakes = totalStakes.add(amount);
-    }
 
-    // payout rewards
-    // - profits are distributed automatically when someone exits the staking contract
-
-    function endStake(uint stakeId) virtual public {
-        require(stakeId != 0, "StakeId can't be 0");
-        require(stakeId <= stakes[msg.sender].length, "Stake Id not found");
-        require(stakes[msg.sender][stakeId-1].to == 0, "Stake already ended");
-
-        Stake storage stake = stakes[msg.sender][stakeId-1];
-        stake.to = block.timestamp;
-
-        // return lp tokens to unstaked balance
-        balances[msg.sender] = balances[msg.sender].add(stake.amount);
-
-        totalStakes = totalStakes.sub(stake.amount);
+        emit Staked(msg.sender, amount);
     }
 
 
-    function getStakes() public view returns (Stake[] memory) {
+    function endStake(uint amount) virtual public {
+        require(stakes[msg.sender] >= amount, "Not enough tokens staked");
+
+        // return lp tokens to lp token balance
+        balances[msg.sender] = balances[msg.sender].add(amount);
+        stakes[msg.sender] = stakes[msg.sender].sub(amount); 
+
+        totalStakes = totalStakes.sub(amount);
+
+        emit UnStaked(msg.sender, amount);
+    }
+
+
+    function getStakedBalance() public view returns (uint) {
         return stakes[msg.sender];
-    }
-
-
-    function getStakedBalance() view public returns (uint) {
-        uint total = 0;
-
-        Stake[] memory userStakes = stakes[msg.sender];
-        for (uint i=0; i<userStakes.length; i++) {
-            if (userStakes[i].to == 0) {
-                total = total.add(userStakes[i].amount);
-            }
-        }
-
-        return total;
     }
 
 
@@ -103,7 +68,7 @@ contract StakingPool is Wallet  {
         // reset user balances and stakes
         for (uint i=0; i < usersArray.length; i++) {
             balances[usersArray[i]] = 0;
-            delete stakes[usersArray[i]];
+            stakes[usersArray[i]] = 0;
         }
         totalStakes = 0;
     }

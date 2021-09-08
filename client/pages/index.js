@@ -1,13 +1,15 @@
 import React from 'react'
-import { Table, Button, Alert } from 'react-bootstrap'
+import { Alert } from 'react-bootstrap'
 
-import { getStakes, getStakesCount } from "../web3/stakes"
+import { getStakedBalance, getClaimableRewards } from "../web3/stakes"
+import { getBalance as getBalanceLP } from "../web3/cake_lp"
+
+import { getCurrentRewardPeriod } from "../web3/reward_phases"
+
 import Header from "../components/Header" 
-import StakeInfo from "../components/StakeInfo"
 import { Page, Center } from "../components/Layout"
 import { AlertDismissible } from "../components/AlertDismissible"
-import CreateStakeForm from "../components/CreateStakeForm"
-import Modal from "../components/Modal" 
+import StakeView from "../components/StakeView"
 
 
 export default class IndexPage extends React.Component {
@@ -15,20 +17,19 @@ export default class IndexPage extends React.Component {
   constructor(props) {
       super(props)
       this.state = {
-        showCreateRewardPhaseModal: false,
         accountConnected: false,
+        currentRewardPerdiod: undefined,
       }
       this.headerRef= React.createRef();
   }
 
   componentDidMount() {
-    this.loadStakes()
+    this.reload()
   } 
 
 
   reload() {
-    console.log("reload IndexPage")
-    this.loadStakes()
+    this.loadBalances()
   }
 
 
@@ -43,48 +44,35 @@ export default class IndexPage extends React.Component {
     })
   }
     
-  toggleCreateRewardPhaseModal = async () => {
-    const { showCreateRewardPhaseModal } = this.state
-    this.setState({
-        showCreateRewardPhaseModal: !showCreateRewardPhaseModal,
-    })
-  }
 
-  async loadStakes() {
-      console.log("loadStakes 1")
+  async loadBalances() {
 
-      getStakesCount().then(count => {
-        console.log("loadStakes 2", count)
-        if (count == 0) {
-            console.log("No stake found!")
-            return null
-        }
-
-        console.log("loadStakes 3")
-        return getStakes()
-        
-      }).then( stakes => {
-          console.log("loadStakes 4", stakes)
-          this.setState({
-            stakes: (stakes && stakes.reverse())
-          })
-      }).catch( error => {
-          console.log(">>> error loading stake:", error)
+    getCurrentRewardPeriod().then( period => {
+      this.setState({currentRewardPerdiod: period})
+      if (period) {
+        return getStakedBalance()
+      }
+    }).then(stakedBalance => {
+        this.setState({lpStaked: stakedBalance})
+        return getBalanceLP()
+      }).then( balanceLP => {
+        this.setState({lpUnstaked: balanceLP.units})
+        return getClaimableRewards()
+      }).then(claimable => {
+        this.setState({claimableRewards: claimable})
+      })
+      .catch( error => {
           this.setState({error: error.message})
       })
   }
 
 
-
   async handleAllowanceUpdated() {
-      // this.loadAllowance();
       console.log(">>> handleAllowanceUpdated() -- TODO")
-
   }
 
 
   handleSuccess = (result) => {
-      console.log(">>> handleSuccess done! result: ", result)
       this.headerRef.current.reload()
       this.reload()
       this.setState({
@@ -97,19 +85,18 @@ export default class IndexPage extends React.Component {
 
 
   handleError = (error, message) => {
-      console.log(">>> handleError", error, message)
       if (message) {
           this.setState({error: message})
-      } else if (error.message) {
+      } else if (error && error.message) {
           this.setState({error: error.message})
       } else {
-          this.setState({error: `An error occurred (${error.toString()})`})
+          this.setState({error: `An error occurred (${error})`})
       }
   }
 
   render() {
 
-    const  { accountConnected, stakes, showCreateRewardPhaseModal } =  this.state
+    const  { accountConnected, lpUnstaked, lpStaked, claimableRewards } =  this.state
 
     if (!accountConnected) return (
       <Page>
@@ -122,94 +109,35 @@ export default class IndexPage extends React.Component {
       </Page>
     )
 
-    const stakesEndedRows = stakes && stakes.filter(item => {return item.to != undefined}).map(item => {
-      return (
-          <StakeInfo key={item.id} {...item} stakeUpdated={() => this.stakeUpdated()}/>
-      )
-    })
-
-    const stakesActiveRows = stakes && stakes.filter(item => {return item.to == undefined}).map(item => {
-      return (
-          <StakeInfo key={item.id} {...item} stakeUpdated={() => this.stakeUpdated()}/>
-      )
-    })
 
     
     return (
 
         <Page>
 
-           <Header ref={this.headerRef} reload={() => this.reload()} setAccountConnected={connected => this.setAccountConnected(connected)}/>
+             <Header ref={this.headerRef} reload={() => this.reload()} setAccountConnected={connected => this.setAccountConnected(connected)}/>
 
-           {showCreateRewardPhaseModal && (
-              <Modal onClose={this.toggleCreateRewardPhaseModal} >
-                    <CreateStakeForm 
-                      handleSuccess={(result) => this.handleSuccess(result)} 
-                      handleError={(error, message) => this.handleError(error, message)}
-                      allowanceUpdated={() => this.handleAllowanceUpdated()}
-                    />
-              </Modal>
-            )}
-
-             <Center> 
+             <Center > 
                 { this.state.error && <AlertDismissible variant="danger" title="Error"> {this.state.error} </AlertDismissible> }
                 { this.state.info && <AlertDismissible variant="info" title={this.state.info.title}>{this.state.info.detail}</AlertDismissible> }
-              </Center>
 
-            { ((stakesEndedRows && stakesEndedRows.length == 0) && (stakesActiveRows && stakesActiveRows.length == 0) ) && <Center> 
-                <AlertDismissible variant="info" 
-                    title="No stake found" 
-                    buttonTitle="Reload" 
-                    buttonAction={() => this.loadStakes()}> 
-                    Check you are on the corrrect network and that a reward phase has been setup.
-                </AlertDismissible>
-              </Center> 
-            }     
+                {!this.state.currentRewardPerdiod && 
+                  <Alert variant="info"> No Active Reward Period. </Alert> 
+                }
 
-            { stakesActiveRows && stakesActiveRows.length > 0 && 
-                 <Center> 
-                    <h3>Stakes Active</h3>
-                    <Table responsive bordered striped="on">
-                          <thead>
-                            <tr>
-                                <th style={{textAlign:"center"}}>#</th>
-                                <th style={{textAlign:"center"}}>Start Date</th>
-                                <th style={{textAlign:"center"}}>End Date</th>
-                                <th style={{textAlign:"center"}}>Amount Staked</th>
-                                <th style={{textAlign:"center"}}>Accrued Reward</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            { stakesActiveRows }
-                        </tbody>
-                    </Table>
-                 </Center> 
-              }
+                {this.state.currentRewardPerdiod && 
+                <StakeView 
+                  lpUnstaked={lpUnstaked}
+                  lpStaked={lpStaked}
+                  claimableRewards={claimableRewards}
+                  handleSuccess={(result) => this.handleSuccess(result)} 
+                  handleError={(error, message) => this.handleError(error, message)}
+                  allowanceUpdated={() => this.handleAllowanceUpdated()}
+                  rewardPerdiod={this.state.currentRewardPerdiod}
+                />
+                }
 
-            { stakesEndedRows && stakesEndedRows.length > 0 && 
-                 <Center> 
-                    <h3>Stakes Ended</h3>
-                    <Table responsive bordered striped="on">
-                          <thead>
-                            <tr>
-                                <th style={{textAlign:"center"}}>#</th>
-                                <th style={{textAlign:"center"}}>Start Date</th>
-                                <th style={{textAlign:"center"}}>End Date</th>
-                                <th style={{textAlign:"center"}}>Staked Period</th>
-                                <th style={{textAlign:"center"}}>Amount Staked</th>
-                                <th style={{textAlign:"center"}}>Reward Paid</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            { stakesEndedRows }
-                        </tbody>
-                    </Table>
-                 </Center> 
-              }
-
-            <div style={{textAlign:"center"}}>
-                <Button onClick={this.toggleCreateRewardPhaseModal}>Stake LP Tokens</Button>
-            </div>
+            </Center>
 
         </Page>
      

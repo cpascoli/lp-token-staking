@@ -1,8 +1,8 @@
 import React from "react";
 
-const RewardPhase = ({ ...props }) => {
+const RewardPhaseInfo = ({ ...props }) => {
 
-  console.log(">>> RewardPhase: ", props)
+  console.log(">>> RewardPhaseInfo: ", props)
 
   const fromDate = new Date(props.from * 1000)
   const toDate = (props.to)? new Date(props.to * 1000) : undefined
@@ -10,9 +10,7 @@ const RewardPhase = ({ ...props }) => {
   const from = fromDate.toLocaleDateString() + " "+ fromDate.toLocaleTimeString()
   const to = (toDate)? toDate.toLocaleDateString() + " "+toDate.toLocaleTimeString() : ''
   const reward = props.reward
-  const totalRewardPaid = props.totalRewardPaid
-  const pendingStaked = props.pendingStaked
-
+  const staked = props.totalStaked
 
   const rewardPerSec = Math.round( reward * 100000 / (props.to - props.from)) / 100000
   return (
@@ -22,11 +20,10 @@ const RewardPhase = ({ ...props }) => {
       <td style={{textAlign:"center"}}> {to} </td>
       <td style={{textAlign:"right"}}> {reward} ETB</td>
       <td style={{textAlign:"right"}}> {rewardPerSec} ETB/s </td>
-      <td style={{textAlign:"right"}}> {totalRewardPaid} </td>
-      <td style={{textAlign:"right"}}> {pendingStaked} </td>
+      <td style={{textAlign:"right"}}> {staked} ETB </td>
     </tr>
   );
 };
 
-export default RewardPhase;
+export default RewardPhaseInfo;
 
