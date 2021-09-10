@@ -1,8 +1,30 @@
-
-.card > * {
-    background: white;
+.header {
+    border: 0px solid black;
+    border-radius: 0px;
+    padding: 0px;
+    margin: 0px;
 }
 
-/* .card-body {
-    background: gray;
-}  */
+.card {
+    border-radius: 25px;
+    border: 1px solid #999999;
+}
+
+.card-title {
+    font-size: 1.0em;
+    color: gray;
+    margin: 0px;
+}
+
+.card-body {
+    padding-top: 0px;
+    padding-bottom: 10px;
+}
+
+
+.divisor {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    background-color: black;
+    height: 1px;
+}

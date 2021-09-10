@@ -1,9 +1,11 @@
 import React from 'react'
 import { Form, Button, InputGroup, Container, Card, FormControl, Row, Col } from 'react-bootstrap'
 
-import { Center } from "../components/Layout"
+import { Center, Wrapped} from "../components/Layout"
 
 import TitleValueBox from './TitleValueBox'
+import RewardsInfo from './RewardsInfo'
+
 import UpdateStakeForm from './UpdateStakeForm'
 import Modal from "./Modal"
 
@@ -24,19 +26,29 @@ export default class StakeView extends React.Component {
   componentDidUpdate(prevProps) {
     if (prevProps.lpUnstaked !== this.props.lpUnstaked ||
       prevProps.lpStaked !== this.props.lpStaked ||
+
       prevProps.claimableRewards !== this.props.claimableRewards ||
+      prevProps.rewardsPaid  !== this.props.rewardsPaid ||
+      prevProps.rewardRate  !== this.props.rewardRate ||
+      prevProps.totalRewardsPaid  !== this.props.totalRewardsPaid ||
+
       prevProps.formType !== this.props.formType ||
       prevProps.rewardPerdiod.totalStaked  !== this.props.rewardPerdiod.totalStaked
+      
     ) {
       this.setState({
         lpUnstaked: this.props.lpUnstaked,
         lpStaked: this.props.lpStaked,
         claimableRewards: this.props.claimableRewards,
+        rewardsPaid: this.props.rewardsPaid,
+        rewardRate: this.props.rewardRate,
+        totalRewardsPaid: this.props.totalRewardsPaid,
         formType: this.props.formType,
         rewardPerdiod: this.props.rewardPerdiod
       })
     }
   }
+
 
 
   claimRewardPressed = () => {
@@ -79,52 +91,62 @@ export default class StakeView extends React.Component {
 
   render() {
 
-    const { showUpdateStakeModal, formType, lpUnstaked, lpStaked, claimableRewards } = this.state
+    const { showUpdateStakeModal, formType, lpUnstaked, lpStaked, claimableRewards, rewardsPaid, rewardRate, totalRewardsPaid } = this.state
+
     const mySharePerc = (lpStaked && this.state.rewardPerdiod.totalStaked > 0) ?  
           Math.round(lpStaked  * 10000 / this.state.rewardPerdiod.totalStaked) / 100 : '0'
     
     return (
       <div>
 
-        <Center maxWidth="800">
-          <Container style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', textAlign: 'center' }}>
-            <Card style={{ flex: 1, maxWidth: 250, margin: 10 }}>
-              <Card.Title>Total LP Tokens Staked</Card.Title>
-              <Card.Body> <h3> { this.state.rewardPerdiod.totalStaked } ETB </h3></Card.Body>
+        <Wrapped>
+            <Card style={{flex: 1, minWidth:200, margin: 10 }}>
+              <Card.Title className="p-2">Total LP Tokens Staked</Card.Title>
+              <Card.Body> { this.state.rewardPerdiod.totalStaked } ETB </Card.Body>
             </Card>
-            <Card style={{ flex: 1, maxWidth: 250, margin: 10 }}>
-              <Card.Title>My LP Tokens Staked</Card.Title>
-              <Card.Body> <h3> {lpStaked} </h3></Card.Body>
+            <Card style={{flex: 1, minWidth:200, margin: 10 }}>
+              <Card.Title className="p-2">My LP Tokens Staked</Card.Title>
+              <Card.Body> {lpStaked} </Card.Body>
             </Card>
-            <Card style={{ flex: 1, maxWidth: 250, margin: 10 }}>
-              <Card.Title>My pool share</Card.Title>
-              <Card.Body><h3> {mySharePerc}%</h3></Card.Body>
+            <Card style={{flex: 1, minWidth:200, margin: 10 }}>
+              <Card.Title className="p-2">My pool share</Card.Title>
+              <Card.Body> {mySharePerc}%</Card.Body>
             </Card>
-          </Container>
-        </Center>
+            <Card style={{flex: 1, minWidth:200, margin: 10 }}>
+              <Card.Title className="p-2">My Rewards Received</Card.Title>
+              <Card.Body>{rewardsPaid} ETB</Card.Body>
+            </Card>
+        </Wrapped>
 
+        <div className="mt-4"></div>
+        
+        
         <Center maxWidth="500">
 
-          <TitleValueBox title="Balance not staked yet:" value={lpUnstaked} symbol="Cake-LP" />
+          <TitleValueBox title="Balance not staked yet" value={lpUnstaked} symbol="Cake-LP" />
 
           <div className="mt-4"></div>
 
-          <Container style={{ justifyContent: 'center', textAlign: 'center' }}>
+          <Container>
             <Row>
               <Col>
-                <Button name="stake" style={{ minWidth: 200 }} variant="primary" onClick={(e) => this.showUpdateStakeModalPreseed("stake")}>Stake</Button>
+                <Button name="stake" className="w-100" variant="primary" onClick={(e) => this.showUpdateStakeModalPreseed("stake")}>Stake</Button>
               </Col>
               <Col>
-                <Button name="unstake" style={{ minWidth: 200 }} variant="secondary" onClick={(e) => this.showUpdateStakeModalPreseed("unstake")}>Unstake</Button>
+                <Button name="unstake" className="w-100" variant="secondary" onClick={(e) => this.showUpdateStakeModalPreseed("unstake")}>Unstake</Button>
               </Col>
             </Row>
           </Container>
 
           <div className="mt-4"></div>
 
-          <TitleValueBox title="Claimable rewards:" value={claimableRewards} symbol="ETB" />
+          <RewardsInfo rewardRate={rewardRate} totalRewardsPaid={totalRewardsPaid} />
 
           <div className="mt-4"></div>
+
+          <TitleValueBox title="Claimable rewards" value={claimableRewards} symbol="ETB" />
+
+          <div className="mt-2"></div>
 
           <div className="d-grid gap-2">
             <Button name="claim" style={{ minWidth: 200 }} variant="primary" onClick={(e) => this.claimRewardPressed()}>Claim rewards</Button>

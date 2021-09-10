@@ -1,7 +1,7 @@
 import React from 'react'
 import { Alert } from 'react-bootstrap'
 
-import { getStakedBalance, getClaimableRewards } from "../web3/stakes"
+import { getStakedBalance, getRewardsStats } from "../web3/stakes"
 import { getBalance as getBalanceLP } from "../web3/cake_lp"
 
 import { getCurrentRewardPeriod } from "../web3/reward_phases"
@@ -55,15 +55,16 @@ export default class IndexPage extends React.Component {
     }).then(stakedBalance => {
         this.setState({lpStaked: stakedBalance})
         return getBalanceLP()
-      }).then( balanceLP => {
-        this.setState({lpUnstaked: balanceLP.units})
-        return getClaimableRewards()
-      }).then(claimable => {
-        this.setState({claimableRewards: claimable})
-      })
-      .catch( error => {
-          this.setState({error: error.message})
-      })
+    }).then( balanceLP => {
+      this.setState({lpUnstaked: balanceLP.units})
+      return getRewardsStats()
+    }).then(info => {
+      console.log(">>> info: ", info)
+      this.setState(info)
+    })
+    .catch( error => {
+        this.setState({error: error.message})
+    })
   }
 
 
@@ -96,7 +97,8 @@ export default class IndexPage extends React.Component {
 
   render() {
 
-    const  { accountConnected, lpUnstaked, lpStaked, claimableRewards } =  this.state
+    console.log(">>>> render",  this.state)
+    const  { accountConnected, lpUnstaked, lpStaked, claimableRewards, rewardsPaid, rewardRate, totalRewardsPaid } =  this.state
 
     if (!accountConnected) return (
       <Page>
@@ -117,6 +119,7 @@ export default class IndexPage extends React.Component {
 
              <Header ref={this.headerRef} reload={() => this.reload()} setAccountConnected={connected => this.setAccountConnected(connected)}/>
 
+             <div className="w-100 divisor" > </div>
              <Center > 
                 { this.state.error && <AlertDismissible variant="danger" title="Error"> {this.state.error} </AlertDismissible> }
                 { this.state.info && <AlertDismissible variant="info" title={this.state.info.title}>{this.state.info.detail}</AlertDismissible> }
@@ -130,6 +133,9 @@ export default class IndexPage extends React.Component {
                   lpUnstaked={lpUnstaked}
                   lpStaked={lpStaked}
                   claimableRewards={claimableRewards}
+                  rewardsPaid={rewardsPaid} 
+                  rewardRate={rewardRate}
+                  totalRewardsPaid={totalRewardsPaid}
                   handleSuccess={(result) => this.handleSuccess(result)} 
                   handleError={(error, message) => this.handleError(error, message)}
                   allowanceUpdated={() => this.handleAllowanceUpdated()}

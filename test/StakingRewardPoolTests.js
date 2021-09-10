@@ -29,7 +29,6 @@ contract("StakingRewardPool", accounts => {
     })
 
     
-
     it("starting a new reward phase should setup the reward phase and reward token balance in the pool", async () => {
         let pool = await StakingRewardPool.deployed()
         let etb = await ETB.deployed()
@@ -506,21 +505,6 @@ contract("StakingRewardPool", accounts => {
         }
     }
 
-    async function printStakes(account) {
-        let pool = await StakingRewardPool.deployed()
-        let etb = await ETB.deployed()
-        let cakeLP = await CakeLP.deployed()
-
-        let deposited = (await cakeLP.balanceOf(account)).toString()
-        let staked = (await pool.getStakedBalance({ from: account })).toNumber()
-        let reward = (await etb.balanceOf(account)).toString()
-
-        let claimable = (await pool.claimableReward({ from: account })).toString()
-
-        let pending = (await pool.getPendingRewards({ from: account })).toString()
-
-        console.log("------- account: " + account + " - deposited: ", deposited, "\tstaked: ", staked, "\treward: ", reward, "\tclaimable: ", claimable, "\tpending: ", pending)
-    }
 
     async function advanceTime(time, info) {
         var ts1 = (await web3.eth.getBlock('latest')).timestamp

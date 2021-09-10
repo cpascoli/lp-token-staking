@@ -68,18 +68,21 @@ export const claimReward = async () => {
 }
 
 
-export const getClaimableRewards = async () => {
-
+export const getRewardsStats = async () => {
   const pool = await getInstance(StakingRewardPool)
   const etb = await getInstance(ETB)
-  const cakeLP = await getInstance(CakeLP)
   const account = await getAccount()
 
   return new Promise( async (resolve, reject)  => {
     try {
-      const result = await pool.claimableReward({from: account})
-      const reward = await toNumber(etb, result, 4)
-      resolve(reward)
+      const result = await pool.getRewardsStats({from: account})
+      const info = {
+        claimableRewards:  await toNumber(etb, result.claimableRewards, 4),
+        rewardsPaid:  await toNumber(etb, result.rewardsPaid, 4),
+        rewardRate:  await toNumber(etb, result.rewardRate, 4),
+        totalRewardsPaid:  await toNumber(etb, result.totalRewardsPaid, 4),
+      }
+      resolve(info)
     } catch (error) {
       reject(error)
     }

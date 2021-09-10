@@ -1,8 +1,7 @@
 import React from 'react'
-import Link from "next/link"
 
-import { Center } from "./Layout"
 import { Container, Row, Col, Button, Dropdown, DropdownButton, ButtonGroup } from 'react-bootstrap'
+import { Flow } from "../components/Layout"
 
 import { shortenAccount, getAccount } from "../web3/utils"
 
@@ -108,24 +107,24 @@ export default class Header extends React.Component {
         const blockNumber = this.state && this.state.blockNumber
         const blockDate = this.state && this.state.blockTimestamp && new Date(this.state.blockTimestamp * 1000)
         const blockDateFormatted = (blockDate && `${blockDate.toLocaleDateString()} @ ${blockDate.toLocaleTimeString()}`) || "-"
-        // const balanceETB = this.state && this.state.balanceETB
-        // const balanceCake = this.state && this.state.balanceCake
         const account = this.state && this.state.account
 
         return (
-            <header >
+            <div className="header">
                 <Container fluid>
-                    <Row className="">
-                        <Col md={2}>
-                            { (balanceETB !== undefined) && <h4 className="m-2"> {balanceETB} ETB</h4> }
-                        </Col>
-                        <Col md={2}>
-                            { (balanceCake !== undefined) && <h4 className="m-2"> {balanceCake} Cake-LP </h4> }
+                    <Row>
+                        <Col>
+                            <Flow>
+                                <div>
+                                { (balanceETB !== undefined) && <h5 className="m-2"> {balanceETB} ETB</h5> }
+                                </div>
+                                <div>
+                                { (balanceCake !== undefined) && <h5 className="m-2"> {balanceCake} Cake-LP </h5> }
+                                </div>
+                            </Flow>
                         </Col>
 
-                        <Col md={6}>&nbsp;</Col>
-
-                        <Col md={2}>
+                        <Col xs className="text-end">
                             {(account &&
                                 <DropdownButton
                                     id="menu"
@@ -134,26 +133,17 @@ export default class Header extends React.Component {
                                 >
                                     <Dropdown.Item eventKey="1" disabled >Block Info</Dropdown.Item>
                                     <Dropdown.Divider />
-                                    <Dropdown.Item eventKey="1" disabled >number: {blockNumber} </Dropdown.Item>
-                                    <Dropdown.Item eventKey="1" disabled >date: {blockDateFormatted}</Dropdown.Item>
+                                    <Dropdown.Item eventKey="2" disabled >number: {blockNumber} </Dropdown.Item>
+                                    <Dropdown.Item eventKey="3" disabled >date: {blockDateFormatted}</Dropdown.Item>
                                     <Dropdown.Divider />
-                                    <Dropdown.Item eventKey="2" onClick={() => this.reloadPressed()}>Reload</Dropdown.Item>
+                                    <Dropdown.Item eventKey="4" onClick={() => this.reloadPressed()}>Reload</Dropdown.Item>
                                 </DropdownButton>
                             ) || <Button name="connect" variant="primary" onClick={() => this.connect()} >Connect Wallet</Button>}
-
                         </Col>
                     </Row>
                 </Container>
 
-                <style jsx>{`
-                    header {
-                        border: 1px solid #999999;
-                        border-radius: 6px;
-                        padding: 10px;
-                    }
-                `}</style>
-
-            </header>
+            </div>
         )
     }
 }

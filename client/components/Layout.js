@@ -1,6 +1,40 @@
 import Head from 'next/head'
 
-import 'bootstrap/dist/css/bootstrap.min.css';
+// import 'bootstrap/dist/css/bootstrap.min.css';
+
+
+export const Flow = ({ children, style, maxWidth }) => (
+  <div style={style}>
+    {children}
+    <style jsx>{`
+      div {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin: 0 auto;
+        padding: 0px;
+      }
+    `}</style>
+  </div>
+)
+
+export const Wrapped = ({ children, style, maxWidth }) => (
+    <div style={style}>
+      {children}
+      <style jsx>{`
+        div {
+          display: flex;
+          flex-direction: row;
+          flex-wrap: wrap;
+          justify-content: center;
+          text-align: center;
+          max-width: ${maxWidth?maxWidth:1000}px;
+          margin: 0 auto;
+          padding: 0px;
+        }
+      `}</style>
+    </div>
+  )
 
 export const Center = ({ children, style, maxWidth }) => (
     <div style={style}>
@@ -9,7 +43,7 @@ export const Center = ({ children, style, maxWidth }) => (
         div {
           max-width: ${maxWidth?maxWidth:1000}px;
           margin: 0 auto;
-          padding: 20px;
+          padding: 0px;
         }
       `}</style>
     </div>
@@ -37,8 +71,8 @@ export const Center = ({ children, style, maxWidth }) => (
         }
         main {
           padding-top: 20px;
-          padding-left: 20px;
-          padding-right: 20px;
+          padding-left: 0px;
+          padding-right: 0px;
         }
       `}</style>
     </div>

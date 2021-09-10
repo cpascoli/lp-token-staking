@@ -124,14 +124,17 @@ export default class UpdateStakeForm extends React.Component {
     render() {
         const { formType, balance } = this.state
 
-        const actionTitle = (formType === 'stake') ? "Stake" : (formType === 'unstake') ? "Unstake" : undefined
-        if (!actionTitle) return (<div>Error</div>)
+        const title = (formType === 'stake') ? "Stake" : (formType === 'unstake') ? "Unstake" : undefined
+        if (!title) return (<div>Error</div>)
 
         return (
+            <div>
+                <h3 className="text-center">{title}</h3>
 
                 <Form className="p-4">
-                    <Form.Group controlId="stakeAmount">
-                        <Form.Label>Amount of LP tokens to {actionTitle} ({balance} Cake-LP available)</Form.Label>
+                    <Form.Group row controlId="stakeAmount">
+                       
+                        <Form.Label variant="secondary" className="w-100 text-end text-muted" >Balance: {balance}</Form.Label>
                         <InputGroup className="mb-3">
                             <Form.Control
                                 type="text" placeholder="0.0" autoComplete="off" value={this.state.amount}
@@ -139,6 +142,7 @@ export default class UpdateStakeForm extends React.Component {
                             />
                             <InputGroup.Text> Cake-LP </InputGroup.Text>
                         </InputGroup>
+
                     </Form.Group>
             
                     <Container>
@@ -150,22 +154,22 @@ export default class UpdateStakeForm extends React.Component {
                         </Row>
                     </Container>
 
-                    <div style={{ textAlign: "center" }} className="pt-4">
+                    <div style={{ textAlign: "center" }} className="mt-4">
                         {this.state.validAmount && !this.state.sufficientAllowance && this.state.formType === 'stake' &&
-                            <Button name="allow" type="button" variant="outline-primary"
+                            <Button name="allow" type="button" variant="primary w-50"
                                 onClick={e => this.allowButtonPressed()} className="pl-2">
                                 Allow LP token transfer
                             </Button>
                         }
                         &nbsp;&nbsp;&nbsp;
-                        {<Button variant="outline-primary" onClick={this.submitForm}
+                        {<Button variant="primary w-25" onClick={this.submitForm}
                             disabled={!(this.state.validAmount && (this.state.formType === 'unstake' || this.state.sufficientAllowance))}>
-                            Submit
+                            {title}
                         </Button>
                         }
                     </div>
                 </Form>
-           
+            </div>
         )
 
     }
