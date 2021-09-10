@@ -1,18 +1,23 @@
 # Staking Dapp for the ETB token
 
-A Dapp to stake Cake-LP tokens into a pool contract and earn ETB tokens in return.
+A Dapp to stake LP tokens into a pool contract and earn rewards tokens in return.
 
 This project was developed for the ["ETB Project #2"](https://github.com/jklepatch/eattheblocks/tree/master/etb-projects/project2-staking) Hackathon organised by [EatTheBlocks](https://www.youtube.com/c/EatTheBlocks/about)
 
 
-Features implemented:
+The pool implements an efficient O(1) algo to distribute the rewards based on the paper [calable-reward-distribution-paper](https://uploads-ssl.webflow.com/5ad71ffeb79acc67c8bcdaba/5ad8d1193a40977462982470_scalable-reward-distribution-paper.pdf
+)
 
-- The staking contract allows an admin to allocate a certain amount of reward tokens to a period of time called "reward phase".
-- Users staking their LP tokens into the pool during a reward phase, will earn a certain amount of reward tokens.
+
+Features included:
+
+- The staking contract allows an admin to define multiple rewards periods. These are time intervals when a certain amount of reward tokens will be distributed to stakers.
+- Users staking their LP tokens into the pool during a reward period, will earn part of the allocated reward tokens.
 - The amount of reward tokens earned is proportional to the amount of tokens staked and the length of the staking period.
-- The pool contract will distribute reward tokens at a constant rate (e.g reward tokens per second)  amoung all active stakes.
-- Users can start and end multiple stakes at any time during a reward phase.
-- When a user ends a stake, he will immediatleu receive the reward tokens earned by that stake.
+- The pool contract will distribute reward tokens at a constant rate (e.g x reward tokens per second)  amoung all active stakers.
+- Users can add and remove tokens from their staked amount at any time during a reward period.
+_ Users can claim their accrued reward tokens.
+- When users end their stake, they get back their LP tokens and all the reward tokens accrued so far.
 
 ### To run the tests 
 
@@ -61,12 +66,15 @@ Metamask has to be connected to the local truffle netowork on port 7545 :
 
 ### User Page
 
-- The user page allows to stake and unstake Cake-LP tokens and earn a reward
+- The user page allows to stake, unstake LP tokens and claim a reward:
 
-![Userr Page](./client/public/images/user-page.png?raw=true)
+![User Page](./doc/images/user-page.png?raw=true)
+
+![Stake Modal](./doc/images/stake-modal.png?raw=true)
+
 
 ### Admin Page
 
 - The admin page allows to create a reward phase to distribute an allocated amount of reward tokens among stakers.
-![Admin Page](./client/public/images/admin-page.png?raw=true)
+![Admin Page](./doc/images/admin-page.png?raw=true)
 
