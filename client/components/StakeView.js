@@ -67,10 +67,12 @@ export default class StakeView extends React.Component {
   }
 
   handleSuccess = () => {
+    this.hideUpdateStakeModalPreseed()
     this.props.handleSuccess()
   }
 
   handleError = () => {
+    this.hideUpdateStakeModalPreseed()
     this.props.handleError()
   }
 

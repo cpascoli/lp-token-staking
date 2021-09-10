@@ -23,9 +23,9 @@ export const getAllowance = async () => {
 
   const account = await getAccount()
   const allowance = await cakeLP.allowance(account, pool.address);
-  const allowanceUnits = await toTokenUnits(cakeLP, allowance)
+  const allowanceDec = await toNumber(cakeLP, allowance, 4)
 
-  return allowanceUnits
+  return Number(allowanceDec.toString())
 }
 
 export const approve = async (amount) => {
@@ -36,7 +36,8 @@ export const approve = async (amount) => {
   const tokenDecimals = await toTokenDecimals(cakeLP, amount)
   console.log(">>>> tokenDecimals: ", tokenDecimals)
 
-  await cakeLP.approve(pool.address, tokenDecimals, {from: account});
+  const response = await cakeLP.approve(pool.address, tokenDecimals, {from: account});
+  return response
 }
 
 

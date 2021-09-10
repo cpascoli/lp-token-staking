@@ -2,8 +2,6 @@ import React from "react";
 
 const RewardPhaseInfo = ({ ...props }) => {
 
-  console.log(">>> RewardPhaseInfo: ", props)
-
   const fromDate = new Date(props.from * 1000)
   const toDate = (props.to)? new Date(props.to * 1000) : undefined
 

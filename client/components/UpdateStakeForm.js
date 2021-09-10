@@ -19,13 +19,13 @@ export default class UpdateStakeForm extends React.Component {
         let isValid = !isNaN(amount) && amount > 0
         this.setState({
             validAmount: isValid,
-            amount: amount.toString(),
+            amount: isNaN(amount)? '' : amount.toString(),
         })
     }
 
     updateAmount = (e) => {
-        let value = Math.floor(Number(e.target.value) * 100) / 100
-        let isValid = !isNaN(value) && value > 0
+        let value = this.parseAmount(e.target.value)
+        let isValid = !isNaN(value) && value >= 0
 
         this.setState({
             validAmount: isValid,
@@ -39,23 +39,19 @@ export default class UpdateStakeForm extends React.Component {
         }
     }
 
-
     allowButtonPressed = async () => {
-        const amount = parseInt(this.state.amount)
-        await approve(amount)
-
-        this.checkAllowance(amount).then(allowanceOk => {
-            this.setState({ sufficientAllowance: allowanceOk })
+        const amount = Number(this.state.amount)
+        await approve(amount).then(result => {
+            this.checkAllowance(amount).then(allowanceOk => {
+                this.setState({ sufficientAllowance: allowanceOk })
+            })
         })
-
-        this.props.allowanceUpdated()
     }
 
     checkAllowance = (amount) => {
         return new Promise((resolve, reject) => {
-            getAllowance().then((allowance, error) => {
-                const allowanceOk = parseInt(amount) <= allowance
-
+            getAllowance().then((allowance) => {
+                const allowanceOk = amount <= allowance
                 resolve(allowanceOk);
             })
             .catch((error) => {
@@ -65,7 +61,6 @@ export default class UpdateStakeForm extends React.Component {
         })
     }
 
-
     submitForm = () => {
         if (this.state.formType === 'stake') {
             this.submitStake()
@@ -74,9 +69,7 @@ export default class UpdateStakeForm extends React.Component {
         }
     }
 
-
     submitStake = () => {
-
         const { amount, sufficientAllowance, validAmount } = this.state
 
         if (!sufficientAllowance) {
@@ -99,7 +92,6 @@ export default class UpdateStakeForm extends React.Component {
     }
 
     submitUnstake = () => {
-
         const { amount, validAmount } = this.state
         if (!validAmount) {
             this.setState({ error: "Invalid tolen amount" })
@@ -125,6 +117,9 @@ export default class UpdateStakeForm extends React.Component {
         }
     }
 
+    parseAmount = (amount) => {
+        return Math.floor(Number(amount) * 100) / 100
+    }
 
     render() {
         const { formType, balance } = this.state
